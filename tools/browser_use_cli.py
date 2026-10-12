@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, NamedTuple, Optional
 
-from hermes_cli.process_identity import register_child, update_supervised_pgids
+from hermes_cli.process_identity import own_process_groups, register_child, release_process_groups
 from hermes_constants import get_hermes_home
 from utils import is_truthy_value
 
@@ -719,7 +719,7 @@ def stop_harness_daemons() -> None:
         with _owned_daemon_groups_lock:
             pgid = _owned_daemon_groups.pop(name, None)
         if pgid is not None:
-            update_supervised_pgids("unregister", [pgid])
+            release_process_groups([pgid])
 
 
 # BU_NAME -> process group of the harness daemon this process owns. The harness starts its daemon with
@@ -768,7 +768,7 @@ def _own_harness_daemon(env: dict) -> None:
         if _owned_daemon_groups.get(name) == pid:
             return
         _owned_daemon_groups[name] = pid
-    update_supervised_pgids("register", [pid])
+    own_process_groups([pid])
     register_child(pid, "browser-harness-daemon")
 
 
