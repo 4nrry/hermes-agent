@@ -117,7 +117,7 @@ class CLIInfoMixin:
 
     def show_banner(self):
         """Display the welcome banner in Claude Code style."""
-        from cli import _build_compact_banner, get_tool_definitions, logger
+        from cli import get_tool_definitions, logger
         from hermes_cli.banner import build_welcome_banner
         self.console.clear()
         ctx_len = None
@@ -127,11 +127,8 @@ class CLIInfoMixin:
         from agent.context_pin import is_context_pinned
         ctx_pinned = is_context_pinned(ctx_len, getattr(getattr(self, "agent", None), "_config_context_length", None))
 
-        # Auto-compact for narrow terminals — the full banner needs ~80 columns to avoid wrapping.
-        if self.compact or shutil.get_terminal_size().columns < 80:
-            self._console_print(_build_compact_banner())
-            self._show_status()
-        else:
+        from hermes_cli.cli_modern_layout import print_short_banner
+        if not print_short_banner(self):
             # Warm-launch fast path: replay last launch's tool panel when the snapshot fingerprint
             # (config.yaml + .env + checkout rev + toolsets) is unchanged, skipping the ~0.5-0.9s
             # cold get_tool_definitions walk. The agent's REAL tool list is still computed fresh at
