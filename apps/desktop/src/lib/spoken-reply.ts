@@ -103,10 +103,11 @@ function textHash(text: string): string {
   return (hash >>> 0).toString(36)
 }
 
-/** One spoken segment of a turn. A tool-run turn speaks several bubbles under
- *  one user turn (interims, then the closing report), so the turn key alone
- *  would let the first bubble's claim swallow the rest. A live-id rewrite
- *  keeps the text, so the key still survives it. */
+/** One spoken message of a turn. A turn with tool calls speaks several bubbles
+ *  under one user turn (progress updates, then the final reply), so the turn
+ *  key alone would let the first bubble's claim swallow the rest. Pass the
+ *  bubble's last text part: a live-id rewrite and a hydration fold both keep
+ *  it, so the key survives either. */
 export function spokenSegmentKey(turnKey: string, text: string): string {
   return `${turnKey}:${textHash(text)}`
 }
