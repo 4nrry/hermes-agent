@@ -2,6 +2,8 @@
 session is on the gateway; client-enforced state (/busy) is mirrored after the owner accepts."""
 from types import SimpleNamespace
 
+import pytest
+
 from hermes_cli import gateway_setting_commands
 
 
@@ -42,3 +44,20 @@ def test_refine_and_review_run_on_the_gateway_sessions_agent(monkeypatch, capsys
     assert conn.calls == [("slash.exec", {"session_id": "local-s", "command": "refine naming"}),
                           ("slash.exec", {"session_id": "local-s", "command": "review the diff"})]
     assert "Busy input mode: queue" in capsys.readouterr().out  # the owner's reply is printed
+
+
+def test_toolsets_is_the_gateway_sessions_report_printed_as_is(monkeypatch, capsys):
+    """#134889 CLI-22: `/toolsets` is the owner's report (its MCP and plugin toolsets, this session's
+    marked), not this process's registry; its already laid-out lines are not re-indented."""
+    report = "+----+\n|  (^_^)b Available Toolsets  |\n\n  (*) mcp-zeta           [11 tools] - MCP server zeta"
+
+    class _Reply(_Conn):
+        def call(self, method, **params):
+            self.calls.append((method, params))
+            return {"type": "exec", "output": report}
+    conn = _Reply()
+    monkeypatch.setattr("hermes_cli.gateway_side.connection_for", lambda cli: conn)
+    monkeypatch.setattr("hermes_cli.cli_info_lines.toolsets_lines", lambda *_a: pytest.fail("read the CLI's registry"))
+    assert gateway_setting_commands.run(SimpleNamespace(session_id="local-s"), "toolsets", "/toolsets") is True
+    assert conn.calls == [("slash.exec", {"session_id": "local-s", "command": "toolsets"})]
+    assert "\n  (*) mcp-zeta           [11 tools]" in capsys.readouterr().out
