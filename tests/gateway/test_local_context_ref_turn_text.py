@@ -52,7 +52,7 @@ async def _prepare(runner, event):
 
 
 @pytest.mark.asyncio
-async def test_cli_api_text_reaches_the_model_expanded_and_the_stored_row_stays_as_typed(project, monkeypatch):
+async def test_cli_api_text_reaches_the_model_expanded_and_the_stored_row_keeps_the_content(project, monkeypatch):
     from gateway.session_cli_turn import cli_turn_scope
     from gateway.run_turn_runner import TurnRunner
     from gateway.turn_context import TurnContext
@@ -61,7 +61,9 @@ async def test_cli_api_text_reaches_the_model_expanded_and_the_stored_row_stays_
     event = _event('read @file:notes.txt')
     with cli_turn_scope('adm-1', {'api_text': '[voice] read @file:notes.txt'}):
         prepared = await _prepare(_runner(monkeypatch, 128_000), event)
-        assert prepared == 'read @file:notes.txt'
+        # The stored row is the typed text with the same attached context a typed turn stores, so a
+        # later turn (which replays history, not the API-only text) still reads the file.
+        assert prepared.startswith('read @file:notes.txt\n\n--- Attached Context ---') and 'PROJECT-NOTES' in prepared
         monkeypatch.setattr(session_policy, 'policy_for_source', lambda runner, source: None)  # the turn's own read
         ctx = TurnContext(
             source=event.source, message=prepared, history=[], session_id='sid', session_key='key',
@@ -73,7 +75,7 @@ async def test_cli_api_text_reaches_the_model_expanded_and_the_stored_row_stays_
     [(message, kwargs)] = ctx.agent_holder[0].calls
     assert message.startswith('[voice] read @file:notes.txt') and 'PROJECT-NOTES' in message
     assert 'DECOY-NOTES' not in message
-    assert kwargs['persist_user_message'] == 'read @file:notes.txt'
+    assert kwargs['persist_user_message'] == prepared
 
 
 @pytest.mark.asyncio
