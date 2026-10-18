@@ -15,7 +15,7 @@ import { $autoSpeakReplies } from '@/store/voice-prefs'
 
 import { ComposerScopeProvider, MAIN_COMPOSER_SCOPE } from '../scope'
 
-import { useAutoSpeakReplies } from './use-auto-speak-replies'
+import { clearOwnedSpeechTurnsForTests, useAutoSpeakReplies } from './use-auto-speak-replies'
 
 vi.mock('@/lib/voice-playback', () => ({
   playSpeechText: vi.fn()
@@ -39,6 +39,7 @@ describe('useAutoSpeakReplies — Edge TTS fallback chain (#93515)', () => {
   afterEach(() => {
     cleanup()
     clearSpokenRepliesForTests()
+    clearOwnedSpeechTurnsForTests()
     $autoSpeakReplies.set(false)
     setVoicePlaybackState({ ...IDLE_STATE })
     vi.clearAllMocks()
@@ -340,21 +341,22 @@ describe('useAutoSpeakReplies — Edge TTS fallback chain (#93515)', () => {
   })
 })
 
-// A tool-run turn speaks several bubbles under ONE user turn: interim
-// commentary, then the closing report. Keyed on the turn alone, the interim's
-// cross-window speech claim (held for minutes) refused the closing report, and
-// the report — already marked spoken — never reached TTS.
-describe('useAutoSpeakReplies — closing report of a tool-run turn', () => {
+// A turn with tool calls speaks several bubbles under ONE user turn: progress
+// updates, then the final reply. Keyed on the turn alone, the progress update's
+// cross-window speech claim (held for minutes) refused the final reply, and
+// the reply (already marked spoken) never reached TTS.
+describe('useAutoSpeakReplies — final reply after tool calls', () => {
   afterEach(() => {
     cleanup()
     clearSpokenRepliesForTests()
+    clearOwnedSpeechTurnsForTests()
     $autoSpeakReplies.set(false)
     setVoicePlaybackState({ ...IDLE_STATE })
     delete (window as { hermesDesktop?: unknown }).hermesDesktop
     vi.clearAllMocks()
   })
 
-  it('speaks the closing report held behind an interim of the same turn', async () => {
+  it('reads the final reply held behind a progress update of the same turn', async () => {
     // The main-process arbiter within its speech TTL: first claim of a key wins.
     const claimed = new Set<string>()
 
@@ -429,13 +431,13 @@ describe('useAutoSpeakReplies — closing report of a tool-run turn', () => {
     })
     expect(playSpeechText).toHaveBeenCalledTimes(1)
 
-    // The closing report lands while the interim is still playing: held.
+    // The final reply lands while the progress update is still playing: held.
     await act(async () => {
       $messages.set([user, interim, assistantMessage('assistant-stream-2', 'Here is the final report.')])
     })
     expect(playSpeechText).toHaveBeenCalledTimes(1)
 
-    // The interim's clip ends.
+    // The progress update's clip ends.
     await act(async () => {
       setVoicePlaybackState({ ...IDLE_STATE })
     })

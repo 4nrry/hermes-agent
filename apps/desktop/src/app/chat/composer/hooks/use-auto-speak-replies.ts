@@ -14,8 +14,38 @@ interface AutoSpeakReply {
   id: string
   pending: boolean
   text: string
+  /** Text that identifies this message within its turn: the bubble's last text
+   *  part. Hydration folds a tool-call turn into one bubble whose full text
+   *  changes, but whose last text part is still this message. Defaults to `text`. */
+  segmentText?: string
   /** Survives the live-id rewrite. Absent callers still speak; they just cannot join an in-flight play. */
   turnKey?: string
+}
+
+// Turns this window speaks for. The window that wins a turn's first message
+// voices every later message of that turn, so a second, idle window cannot
+// start the final reply over the first window's progress update.
+const OWNED_TURNS_MAX = 64
+const ownedTurns = new Set<string>()
+
+async function claimSpeech(turnKey: string | undefined, claimKey: string): Promise<boolean> {
+  if (turnKey && !ownedTurns.has(turnKey)) {
+    if (!(await ownsAmbientCue(`speak:turn:${turnKey}`))) {
+      return false
+    }
+
+    ownedTurns.add(turnKey)
+
+    if (ownedTurns.size > OWNED_TURNS_MAX) {
+      ownedTurns.delete(ownedTurns.values().next().value!)
+    }
+  }
+
+  return ownsAmbientCue(claimKey)
+}
+
+export function clearOwnedSpeechTurnsForTests(): void {
+  ownedTurns.clear()
 }
 
 interface UseAutoSpeakReplies {
@@ -78,21 +108,22 @@ export function useAutoSpeakReplies({
 
       markSpoken()
       const marked = spokenReplyOf(sessionId)
-      // Only one window voices a given reply when the same chat is open in
-      // several. The claim key is the turn's segment, not the row id: hydration
-      // rewrites the row id, and a second claim would start a second clip. A
-      // tool-run turn speaks several bubbles under one turn, so the turn alone
-      // would let the first bubble's claim refuse the closing report.
-      const segmentKey = reply.turnKey ? spokenSegmentKey(reply.turnKey, reply.text) : null
+      // Only one window voices a turn when the same chat is open in several:
+      // the turn's owner (see claimSpeech), then once per message. Keys are the
+      // turn and its message text, not the row id: hydration rewrites the row
+      // id, and a second claim would start a second clip. A turn with tool
+      // calls speaks several messages, so the turn alone would let the first
+      // message's claim refuse the final reply.
+      const segmentKey = reply.turnKey ? spokenSegmentKey(reply.turnKey, reply.segmentText ?? reply.text) : null
       const claimKey = `speak:${segmentKey ?? reply.id}`
 
-      void ownsAmbientCue(claimKey).then(owns => {
+      void claimSpeech(reply.turnKey, claimKey).then(owns => {
         if (attempt !== attemptSeq) {
           return
         }
 
         if (!owns) {
-          // Another window (or an earlier attempt) already voiced this segment.
+          // Another window owns this turn, or this message was already voiced.
           console.debug('[auto-speak] claim already taken', claimKey)
 
           return
