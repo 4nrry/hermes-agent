@@ -144,8 +144,10 @@ async def pause_delegation(connection, ref, params):
 _ROLLBACK_FIELDS = {'list': {'session_id', 'profile'}, 'diff': {'session_id', 'profile', 'hash'},
                     'restore': {'session_id', 'profile', 'hash', 'file_path', 'all'},
                     'session_diff': {'session_id', 'profile'}}
-# ``rollback.session_diff`` body bound: well inside one 8 MiB frame (the classic CLI shows 400 lines).
-_SESSION_DIFF_CHARS = 2 * 1024 * 1024
+# ``rollback.session_diff`` stat + body bound, in bytes on the wire: half the 8 MiB frame every client
+# accepts (``hermes_cli/gateway_client.py``). Counted JSON-escaped, since a control character is one
+# character but six bytes (``\u0001``); the classic CLI shows 400 lines either way.
+_SESSION_DIFF_BYTES = 4 * 1024 * 1024
 
 
 async def rollback(connection, ref, params, *, kind):
@@ -237,9 +239,29 @@ def _session_diff(mgr, cwd, refusal):
     if not result.get('success'):
         return {'enabled': True, 'success': False, 'error': str(result.get('error') or '')}
     diff = result.get('diff', '')
-    body = diff if len(diff) <= _SESSION_DIFF_CHARS else diff[:_SESSION_DIFF_CHARS].rpartition('\n')[0]
-    return {'enabled': True, 'success': True, 'stat': result.get('stat', ''), 'diff': body,
+    stat = _fit_frame(result.get('stat', ''), _SESSION_DIFF_BYTES)
+    body = _fit_frame(diff, _SESSION_DIFF_BYTES - _wire_bytes(stat))
+    return {'enabled': True, 'success': True, 'stat': stat, 'diff': body,
             'diff_lines': len(diff.splitlines()), 'empty': bool(result.get('empty'))}
+
+
+def _wire_bytes(text):
+    """Bytes ``text`` takes inside a frame: JSON-escaped as ``serialize_frame`` writes it, then UTF-8."""
+    return len(json.dumps(text, ensure_ascii=False).encode('utf-8', 'surrogatepass')) - 2
+
+
+def _fit_frame(text, budget):
+    """The longest whole-line prefix of ``text`` whose wire size fits ``budget`` bytes. The caller
+    reports the uncut line count, so the client names the cut instead of the frame dropping the socket."""
+    if len(text) * 6 <= budget or (len(text) <= budget and _wire_bytes(text) <= budget):
+        return text
+    kept, used = [], 0
+    for line in text[:budget + 1].splitlines(keepends=True):  # chars cost >= 1 byte; +1 keeps a cut line over
+        used += _wire_bytes(line)
+        if used > budget:
+            break
+        kept.append(line)
+    return ''.join(kept).removesuffix('\n')
 
 
 async def _rewind_last_turn(connection, ref):
