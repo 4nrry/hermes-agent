@@ -92,19 +92,41 @@ def _skill_line(item: dict) -> str:
     return f"    - {nm}: {desc}" if desc else f"    - {nm}"
 
 
+def _banner_plan(cli, console):
+    """``(store, inventory, ctx_len, banner_kw)`` for the welcome banner, shared by startup
+    (``show_banner``) and ``/clear`` so the two cannot drift apart. A gateway session's tools are
+    its snapshot (``inventory``), never this process's registry. ``banner_kw`` is
+    ``build_welcome_banner``'s common kwargs, or None for the compact banner (narrow terminal, or a
+    gateway session with no snapshot yet)."""
+    from agent.context_pin import is_context_pinned
+    from hermes_cli.gateway_tools_notify import gateway_store
+    store = gateway_store(cli)
+    inventory = store.banner_inventory() if store is not None else None
+    agent = getattr(cli, "agent", None)
+    compressor = getattr(agent, "context_compressor", None)
+    ctx_len = compressor.context_length if compressor is not None else None
+    if cli.compact or shutil.get_terminal_size().columns < 80 or (store is not None and inventory is None):
+        return store, inventory, ctx_len, None
+    return store, inventory, ctx_len, dict(
+        console=console, model=cli.model, cwd=os.getenv("TERMINAL_CWD", os.getcwd()),
+        enabled_toolsets=cli.enabled_toolsets, session_id=cli.session_id, context_length=ctx_len,
+        provider=cli.provider,
+        context_pinned=is_context_pinned(ctx_len, getattr(agent, "_config_context_length", None)))
+
+
 class CLIInfoMixin:
     """Informational views and reload flows for the interactive CLI: banner, help, tools, usage,
     insights, MCP/skills reload, bang shell."""
 
-    def _show_gateway_banner(self, build_welcome_banner, inventory, banner_kw, cwd, ctx_len):
+    def _show_gateway_banner(self, build_welcome_banner, inventory, banner_kw):
         """Main's banner from the gateway session's snapshot (the TUI banner's data): the CLI
         enumerates nothing. The canonical id shows as main's 8-character label (display only)."""
         from hermes_cli.gateway_session_store import session_label
-        self._defer_tool_warnings = True
         build_welcome_banner(
             tools=inventory["tools"], get_toolset_for_tool=inventory["get_toolset_for_tool"],
             availability=inventory["availability"], skills_by_category=inventory["skills_by_category"],
-            **{**banner_kw, "cwd": inventory["cwd"] or cwd, "context_length": inventory["context_length"] or ctx_len,
+            **{**banner_kw, "cwd": inventory["cwd"] or banner_kw["cwd"],
+               "context_length": inventory["context_length"] or banner_kw["context_length"],
                "session_id": session_label(self.session_id)})
 
     def _print_gateway_tool_warnings(self, lines):
@@ -120,17 +142,11 @@ class CLIInfoMixin:
         from cli import _build_compact_banner, get_tool_definitions, logger
         from hermes_cli.banner import build_welcome_banner
         self.console.clear()
-        ctx_len = None
-        gateway_inventory = getattr(getattr(self, "_session_db", None), "banner_inventory", lambda: None)()
-        from hermes_cli.gateway_tools_notify import gateway_store
-        on_gateway = gateway_store(self) is not None  # its tools come from the gateway: never enumerated here
-        if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
-            ctx_len = self.agent.context_compressor.context_length
-        from agent.context_pin import is_context_pinned
-        ctx_pinned = is_context_pinned(ctx_len, getattr(getattr(self, "agent", None), "_config_context_length", None))
+        store, gateway_inventory, ctx_len, banner_kw = _banner_plan(self, self.console)
+        on_gateway = store is not None  # its tools come from the gateway: never enumerated here
 
         # Auto-compact for narrow terminals — the full banner needs ~80 columns to avoid wrapping.
-        if self.compact or shutil.get_terminal_size().columns < 80 or (on_gateway and gateway_inventory is None):
+        if banner_kw is None:
             self._console_print(_build_compact_banner())
             self._show_status()
         else:
@@ -144,14 +160,9 @@ class CLIInfoMixin:
                 snapshot = load_banner_snapshot(self.enabled_toolsets)
             except Exception:
                 snapshot = None
-            cwd = os.getenv("TERMINAL_CWD", os.getcwd())  # where commands will execute
-            banner_kw = dict(
-                console=self.console, model=self.model, cwd=cwd,
-                enabled_toolsets=self.enabled_toolsets, session_id=self.session_id,
-                context_length=ctx_len, provider=self.provider, context_pinned=ctx_pinned)
 
             if gateway_inventory is not None:
-                self._show_gateway_banner(build_welcome_banner, gateway_inventory, banner_kw, cwd, ctx_len)
+                self._show_gateway_banner(build_welcome_banner, gateway_inventory, banner_kw)
             elif snapshot is not None:
                 self._defer_tool_warnings = True
                 toolset_map = snapshot["toolset_map"]
