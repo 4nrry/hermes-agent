@@ -2,6 +2,7 @@
 CLI-8, CLI-17, CLI-21): ``/diff session`` (the gateway tools' checkpoint baseline), ``/reload``
 (the gateway's ``.env``) and ``/handoff`` (no gateway verb yet: refused, never silent). Driven
 through ``HermesCLI.process_command`` with a scripted gateway connection."""
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
@@ -10,7 +11,7 @@ from cli import HermesCLI
 
 
 class _Conn:
-    closed = False
+    closed = final = False
 
     def __init__(self, replies):
         self.replies = replies
@@ -83,3 +84,31 @@ def test_handoff_is_refused_with_a_message_on_the_gateway(gateway_cli, capsys):
     assert cli.process_command("/handoff telegram") is True  # the session stays
     assert "/handoff is not available on the shared gateway yet" in capsys.readouterr().out
     assert conn.calls == []  # a named refusal runs nothing: no command.observe (pre_command) either
+
+
+def test_save_is_the_gateway_owners_export_not_this_processs_history(tmp_path, monkeypatch, capsys):
+    """CLI-19: ``/save`` asks the owner (``session.save``) for its canonical export, never writes the
+    in-memory fallback (no title, no metadata, no archived rows) that ``import_sessions`` can't restore.
+    A given filename gets the owner's file moved there."""
+    from hermes_cli.gateway_session_store import GatewaySessionStore
+    owner_file, work = tmp_path / "owner.md", tmp_path / "work"
+    work.mkdir()
+    owner_file.write_text("# owner export", encoding="utf-8")
+    conn = _Conn({"session.save": {"file": str(owner_file)}})
+    cli = HermesCLI.__new__(HermesCLI)
+    cli.session_id, cli.conversation_history = "local-s", [{"role": "user", "content": "in-memory only"}]
+    cli.model, cli.session_start = "fake-model", datetime(2026, 10, 18)
+    cli._session_db = GatewaySessionStore(conn)
+    monkeypatch.chdir(work)
+    cli.save_conversation("/save markdown notes.md redact")
+    assert conn.calls == [("session.save", {"session_id": "local-s", "format": "md", "redact": True})]
+    assert (work / "notes.md").read_text(encoding="utf-8") == "# owner export" and not owner_file.exists()
+    assert str(work / "notes.md") in capsys.readouterr().out
+    conn.replies["session.save"] = {}  # an owner refusal (here: no file) is reported, nothing written locally
+    cli.save_conversation("/save json")
+    assert "Failed to save" in capsys.readouterr().out
+    cli.conversation_history = []  # nothing said yet: nothing asked of the owner, nothing written
+    cli.save_conversation("/save json")
+    assert "No conversation to save" in capsys.readouterr().out and len(conn.calls) == 2
+    assert [p.name for p in work.iterdir()] == ["notes.md"]
+    assert not list(tmp_path.rglob("hermes_conversation_*"))

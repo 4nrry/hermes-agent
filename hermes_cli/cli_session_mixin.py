@@ -135,6 +135,20 @@ def _apply_new_session_title(cli, title: str) -> Optional[str]:
     return sanitized
 
 
+def _save_target(filename: str) -> Path:
+    """A ``/save`` filename as typed: ``~`` expanded, a relative name under the cwd."""
+    path = Path(filename).expanduser()
+    return path if path.is_absolute() else Path.cwd() / path
+
+
+def _print_save_ok(path: Path, fmt: str, session_id: Optional[str]) -> None:
+    """``/save``'s success lines: the written path with its format, then how to resume."""
+    label = {"json": "JSON", "md": t("cli.session.format_markdown"), "html": "HTML"}[fmt]
+    print(t("cli.session.save_ok", path=path, label=label))
+    if session_id:
+        print(f"       {t('cli.session.save_resume_hint', session_id=session_id)}")
+
+
 class CLISessionMixin:
     """Session lifecycle for the interactive CLI: new/resume/save, undo/retry rewinds, yolo
     persistence, manual compression, and exit summary."""
@@ -644,6 +658,13 @@ class CLISessionMixin:
             print(SAVE_USAGE)
             return
         filename = parts[1] if len(parts) > 1 else None
+        from hermes_cli.gateway_tools_notify import gateway_store
+        store = gateway_store(self)
+        if store is not None:  # the gateway owns the session: its session.save writes the export
+            if not self.conversation_history:  # as Ink: nothing said yet, nothing exported
+                print(t("cli.session.save_nothing"))
+                return
+            return self._save_on_gateway(store.connection, fmt, filename, redact)
 
         # Prefer the durable DB row (metadata + tool calls); fall back to in-memory history.
         # getattr: test doubles may not carry _session_db / session_id.
@@ -678,9 +699,7 @@ class CLISessionMixin:
             print(t("cli.session.save_dir_failed", path=saved_dir, error=e))
             return
         if filename:
-            path = Path(filename).expanduser()
-            if not path.is_absolute():
-                path = Path.cwd() / path
+            path = _save_target(filename)
         else:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             path = saved_dir / f"hermes_conversation_{timestamp}.{fmt}"
@@ -689,17 +708,29 @@ class CLISessionMixin:
             content = render_session_for_save(session_data, fmt)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
-            label = {"json": "JSON", "md": t("cli.session.format_markdown"), "html": "HTML"}[fmt]
-            print(t("cli.session.save_ok", path=path, label=label))
+            _print_save_ok(path, fmt, self.session_id)
             # #76354 review F5: the worker thread also rebound the session ContextVar inside its own
             # (copied) context, which the caller never sees — and get_session_env() prefers an already-bound
             # ContextVar over os.environ. Rebind in the CALLER's context so post-compression
             # tools/subprocesses on this thread resolve HERMES_SESSION_ID to the child id after an
             # out-of-place rotation (idempotent when no rotation happened).
-            if self.session_id:
-                print(f"       {t('cli.session.save_resume_hint', session_id=self.session_id)}")
         except Exception as e:
             print(t("cli.session.save_failed", error=e))
+
+    def _save_on_gateway(self, connection, fmt, filename, redact):
+        """``/save`` of a gateway session: the owner exports its stored row (``session.save``), so the
+        file is the same snapshot ``hermes sessions export`` writes (title, metadata, archived rows),
+        never this process's in-memory history. A given ``filename`` gets the owner's file moved there."""
+        from hermes_cli.gateway_client import GatewayClientError
+        try:
+            result = connection.call("session.save", session_id=self.session_id, format=fmt, redact=redact) or {}
+            path = Path(result["file"])
+            if filename:
+                path = Path(shutil.move(path, _save_target(filename)))
+        except (GatewayClientError, KeyError, OSError) as e:
+            print(t("cli.session.save_nothing") if str(e) == "not_found" else t("cli.session.save_failed", error=e))
+            return
+        _print_save_ok(path, fmt, self.session_id)
 
     def _publish_truncated_history(self, truncated: list, *, invalidate_prompt: bool) -> None:
         """Install a rewound history and mirror it onto the agent (flush index reset so the
