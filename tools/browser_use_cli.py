@@ -19,7 +19,8 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, NamedTuple, Optional
 
-from hermes_cli.process_identity import own_process_groups, register_child, release_process_group_once_empty
+from hermes_cli.process_identity import (
+    own_process_groups, register_child, release_process_group_once_empty, spawn_env, spawned_by_this_process)
 from hermes_constants import get_hermes_home
 from utils import is_truthy_value
 
@@ -178,6 +179,8 @@ def _base_subprocess_env() -> dict:
         env.pop("PYTHONPATH", None)
     env["PATH"] = _floor_subprocess_path(env.get("PATH", ""))
     env.setdefault("ANONYMIZED_TELEMETRY", "false")
+    # A daemon the CLI starts inherits this tag; _own_harness_daemon owns only one that names us.
+    env.update(spawn_env("browser-harness-daemon"))
     return env
 
 
@@ -762,6 +765,8 @@ def _own_harness_daemon(env: dict) -> None:
         if (os.getsid(pid) != pid or proc.uids().real != os.getuid()  # windows-footgun: ok — posix-only, returned above
                 or argv[argv.index("-m") + 1] != "browser_harness.daemon"):
             return
+        if not spawned_by_this_process(pid):
+            return  # another Hermes on the same BU_NAME started it: that Hermes owns it
     except (OSError, ValueError, KeyError, TypeError, IndexError, psutil.Error) as exc:
         logger.debug("browser_exec: no harness daemon to supervise for %s: %s", name, exc)
         return
