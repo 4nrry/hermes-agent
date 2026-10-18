@@ -460,7 +460,8 @@ method("session.undo", params=SessionUndoParams, result=SessionUndoResult,
 
 
 class SessionSaveParams(SessionParams):
-    pass
+    format: str | None = None  # json (default) | md | html + aliases (normalize_save_format)
+    redact: bool = False  # force-mode secret redaction before writing
 
 
 class SessionSaveResult(Result):

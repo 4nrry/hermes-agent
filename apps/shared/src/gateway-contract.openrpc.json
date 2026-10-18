@@ -37921,6 +37921,23 @@
             ],
             "default": null,
             "title": "Profile"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Format"
+          },
+          "redact": {
+            "default": false,
+            "title": "Redact",
+            "type": "boolean"
           }
         },
         "required": [

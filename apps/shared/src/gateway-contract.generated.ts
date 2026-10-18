@@ -3422,6 +3422,8 @@ export interface SessionUndoResult {
 export interface SessionSaveParams {
   session_id: string
   profile?: string | null
+  format?: string | null
+  redact?: boolean
 }
 /** Under turn isolation the compute host's result passes through verbatim. */
 export interface SessionSaveResult {

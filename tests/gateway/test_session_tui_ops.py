@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from hermes_state import SessionDB
 from tests.gateway.test_session_busy_controls import owner, settled
 from tests.gateway.fixtures.local_recovery_probe import rpc, websocket
 
@@ -24,7 +25,29 @@ def test_session_save_exports_the_stored_transcript_under_the_profile_home(tmp_p
                 data = json.loads(await asyncio.to_thread(Path(path).read_text, encoding='utf-8'))
                 contents = [m.get('content') for m in data['messages']]
                 assert 'SAVE_ME' in contents and 'CONTROL_ACK' in contents, data
-                for params, reason in [({'session_id': sid, 'format': 'md'}, 'invalid_params'),
+                # The classic CLI's /save <format> [redact] (CLI-19): its JSON is the canonical export,
+                # so `import_sessions` restores it with its title, and md/html render the same row.
+                secret = 'sk-proj-abcdefghij1234567890ABCDEFGHIJ'
+                await rpc(ws, 'prompt.submit', session_id=sid, input_id='secret', text=f'key {secret}')
+                await settled(home)
+                revision = (await rpc(ws, 'session.resume', session_id=sid))['result']['revision']
+                renamed = await rpc(ws, 'session.mutate', session_id=sid, request_id='title', expected_revision=revision,
+                                    operation='rename', payload={'title': 'Saved Title'})
+                assert 'result' in renamed, renamed
+                saved = await rpc(ws, 'session.save', session_id=sid, format='json')
+                data = json.loads(await asyncio.to_thread(Path(saved['result']['file']).read_text, encoding='utf-8'))
+                assert data['title'] == 'Saved Title' and all('active' in m for m in data['messages']), data
+                with SessionDB(db_path=tmp_path / 'restored.db') as restored:
+                    assert restored.import_sessions([data])['ok']
+                    assert restored.get_session(data['id'])['title'] == 'Saved Title'
+                    assert 'SAVE_ME' in [m['content'] for m in restored.get_messages(data['id'])]
+                md = await rpc(ws, 'session.save', session_id=sid, format='md', redact=True)
+                assert md['result']['file'].endswith('.md'), md
+                text = await asyncio.to_thread(Path(md['result']['file']).read_text, encoding='utf-8')
+                assert 'SAVE_ME' in text and 'Saved Title' in text and secret not in text
+                assert secret in json.dumps(data)  # only the redacted export drops it
+                for params, reason in [({'session_id': sid, 'format': 'pdf'}, 'invalid_params'),
+                                       ({'session_id': sid, 'redact': 'yes'}, 'invalid_params'),
                                        ({'session_id': sid, 'profile': 'foreign'}, 'profile_mismatch'),
                                        ({}, 'invalid_params')]:
                     assert (await rpc(ws, 'session.save', **params))['error']['message'] == reason

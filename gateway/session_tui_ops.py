@@ -53,28 +53,39 @@ def _live_ref(connection, ref, params, fields, capability):
 
 
 async def save_session(connection, ref, params):
-    """``/save``: main's ``session.save`` — the stored transcript as a ``/save json`` snapshot in the
-    profile's ``sessions/saved/``. Reads the conversation's CURRENT physical row (a local session's
+    """``/save [json|md|html] [redact]``: main's ``session.save`` — the stored session rendered as main's
+    ``/save <format>`` in the profile's ``sessions/saved/`` (``format`` defaults to the JSON snapshot
+    ``hermes sessions export`` writes). Reads the conversation's CURRENT physical row (a local session's
     reset/compression child), like main's ``_submit_row_target_key``."""
-    _live_ref(connection, ref, params, {'session_id', 'profile'}, 'session:read')
+    _live_ref(connection, ref, params, {'session_id', 'profile', 'format', 'redact'}, 'session:read')
+    from hermes_cli.session_export import load_save_snapshot, normalize_save_format, render_session_for_save
+    try:
+        fmt = normalize_save_format(params.get('format'))
+    except (AttributeError, ValueError) as exc:
+        raise RuntimeStoreError('invalid_params') from exc
+    redact = params.get('redact', False)
+    if type(redact) is not bool:
+        raise RuntimeStoreError('invalid_params')
     authority = connection.authority
     from gateway.session_ancillary import physical_target
     target = physical_target(authority, ref)
 
     def write():
-        from hermes_cli.session_export import load_save_snapshot, render_session_for_save
         from hermes_state import SessionExportTooLargeError
         try:
-            data = load_save_snapshot(authority.db, target, 'json')
+            data = load_save_snapshot(authority.db, target, fmt)
         except SessionExportTooLargeError as exc:
             raise RuntimeStoreError('export_too_large') from exc
         if not data:
             raise RuntimeStoreError('not_found')
+        if redact:
+            from hermes_cli.session_export_md import redact_session_data
+            data = redact_session_data(data)
         path = (_profile_home(authority) / 'sessions' / 'saved'
-                / f'hermes_conversation_{datetime.now():%Y%m%d_%H%M%S}.json')
+                / f'hermes_conversation_{datetime.now():%Y%m%d_%H%M%S}.{fmt}')
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(render_session_for_save(data, 'json'), encoding='utf-8')
+            path.write_text(render_session_for_save(data, fmt), encoding='utf-8')
         except OSError as exc:
             raise RuntimeStoreError('storage_unavailable') from exc
         return {'file': str(path)}
