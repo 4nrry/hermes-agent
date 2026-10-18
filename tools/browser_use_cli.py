@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, NamedTuple, Optional
 
-from hermes_cli.process_identity import own_process_groups, register_child, release_process_groups
+from hermes_cli.process_identity import own_process_groups, register_child, release_process_group_once_empty
 from hermes_constants import get_hermes_home
 from utils import is_truthy_value
 
@@ -720,7 +720,7 @@ def stop_harness_daemons() -> None:
         with _owned_daemon_groups_lock:
             pgid = _owned_daemon_groups.pop(name, None)
         if pgid is not None:
-            release_process_groups([pgid])
+            release_process_group_once_empty(pgid)  # a daemon --reload failed to stop stays covered
 
 
 # BU_NAME -> process group of the harness daemon this process owns. The harness starts its daemon with
