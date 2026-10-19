@@ -1041,8 +1041,8 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             body = data.get("body", "")
             if data.get("isGroup"):
                 body = self._clean_bot_mention_text(body, data)
-            if msg_type == MessageType.VOICE and cached_urls and str(body).strip().lower() == "[ptt received]":
-                body = ""  # Bridge placeholder for captionless voice notes; the audio is the payload.
+            if msg_type == MessageType.VOICE and cached_urls and str(body).strip().lower() in ("[ptt received]", "[audio received]"):
+                body = ""  # Bridge placeholder for captionless voice notes (forwarded ones say "audio").
             # Quoted message stays in structured fields only — GatewayRunner renders the "[Replying to: ...]" pointer.
             quoted = bool(data.get("hasQuotedMessage"))
             raw_reply_id = data.get("quotedMessageId") if quoted else None

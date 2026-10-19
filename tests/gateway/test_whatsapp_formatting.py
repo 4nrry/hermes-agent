@@ -358,3 +358,27 @@ def test_classify_forwarded_voice_note(media_type, mime, expected):
 
     data = {"hasMedia": True, "mediaType": media_type, "mime": mime}
     assert WhatsAppAdapter._classify_bridge_message(data) is MessageType[expected]
+
+
+@pytest.mark.asyncio
+async def test_forwarded_voice_note_drops_audio_placeholder(tmp_path, monkeypatch):
+    """A forwarded voice note carries the "[audio received]" placeholder body; once it is
+    classified as VOICE the audio is the payload and the placeholder must not reach the agent."""
+    from gateway.platforms.event import MessageType
+    from plugins.platforms.whatsapp import adapter as adapter_module
+
+    adapter = _make_adapter()
+    audio_path = tmp_path / "aud_fwd.ogg"
+    audio_path.write_bytes(b"OggS")
+    monkeypatch.setattr(adapter_module, "_is_allowed_bridge_path", lambda url: True)
+
+    event = await adapter._build_message_event({
+        "messageId": "fwd-voice", "chatId": "15551234567@s.whatsapp.net",
+        "senderId": "15551234567@s.whatsapp.net", "senderName": "Ananya", "isGroup": False,
+        "body": "[audio received]", "hasMedia": True, "mediaUrls": [str(audio_path)],
+        "mediaType": "audio", "mime": "audio/ogg; codecs=opus",
+    })
+
+    assert event is not None
+    assert event.message_type is MessageType.VOICE
+    assert not (event.text or "").strip()
