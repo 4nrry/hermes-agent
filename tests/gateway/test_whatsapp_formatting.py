@@ -344,3 +344,17 @@ class TestBridgeEventMetadata:
 # ---------------------------------------------------------------------------
 # display_config tier classification
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("media_type, mime, expected", [
+    ("ptt", "audio/ogg; codecs=opus", "VOICE"),
+    # Forwarded voice notes lose the ptt flag but keep the Opus voice-note encoding.
+    ("audio", "audio/ogg; codecs=opus", "VOICE"),
+    ("audio", "audio/mpeg", "AUDIO"),
+])
+def test_classify_forwarded_voice_note(media_type, mime, expected):
+    from gateway.platforms.event import MessageType
+    from plugins.platforms.whatsapp.adapter import WhatsAppAdapter
+
+    data = {"hasMedia": True, "mediaType": media_type, "mime": mime}
+    assert WhatsAppAdapter._classify_bridge_message(data) is MessageType[expected]
