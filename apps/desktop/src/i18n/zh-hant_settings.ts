@@ -1563,6 +1563,11 @@ export const zhHantSettings = {
         disabledTitle: '真實設定檔瀏覽：已關閉',
         disabledMessage: '設定檔快照將被刪除；新工作階段使用乾淨的瀏覽器。',
         failedSave: '無法儲存真實設定檔設定',
+        browserLabel: '複製來源瀏覽器',
+        browserDescription: '要快照其設定檔的已安裝 Chromium 瀏覽器。系統預設使用作業系統的預設瀏覽器。',
+        browserSystemDefault: '系統預設（自動）',
+        browserSavedTitle: '已儲存真實設定檔瀏覽器',
+        browserSavedMessage: '新工作階段將複製此瀏覽器的設定檔。',
         prompt: {
           title: '讓網站保持登入狀態',
           body: '讓 Hermes 使用預設瀏覽器設定檔的快照進行瀏覽，網站開啟時即已登入。',

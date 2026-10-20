@@ -2001,6 +2001,11 @@ export const zhOverrides = {
         disabledTitle: '真实配置文件浏览：已关闭',
         disabledMessage: '配置文件快照将被删除；新会话使用干净的浏览器。',
         failedSave: '无法保存真实配置文件设置',
+        browserLabel: '复制来源浏览器',
+        browserDescription: '要快照其配置文件的已安装 Chromium 浏览器。系统默认使用操作系统的默认浏览器。',
+        browserSystemDefault: '系统默认（自动）',
+        browserSavedTitle: '已保存真实配置文件浏览器',
+        browserSavedMessage: '新会话将复制此浏览器的配置文件。',
         prompt: {
           title: '让网站保持登录状态',
           body: '让 Hermes 使用默认浏览器配置文件的快照进行浏览，网站打开时即已登录。',

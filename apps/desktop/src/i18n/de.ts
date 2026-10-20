@@ -2397,6 +2397,11 @@ export const deOverrides = {
         disabledTitle: 'Echtes Profil-Browsen deaktiviert',
         disabledMessage: 'Der Profil-Schnappschuss wird gelöscht; neue Sessions verwenden einen sauberen Browser.',
         failedSave: 'Die Echtes-Profil-Einstellung konnte nicht gespeichert werden',
+        browserLabel: 'Browser als Quelle',
+        browserDescription: 'Das Profil welches installierten Chromium-Browsers kopiert wird. Systemstandard nutzt den Standardbrowser des Betriebssystems.',
+        browserSystemDefault: 'Systemstandard (automatisch)',
+        browserSavedTitle: 'Browser für echtes Profil gespeichert',
+        browserSavedMessage: 'Neue Sitzungen kopieren das Profil dieses Browsers.',
         prompt: {
           title: 'Auf Ihren Websites angemeldet bleiben',
           body: 'Lassen Sie Hermes mit einem Schnappschuss Ihres Standard-Browserprofils browsen, damit Websites bereits angemeldet öffnen.',

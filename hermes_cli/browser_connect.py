@@ -339,8 +339,34 @@ def _detect_default_linux() -> str | None:
     return _classify_default(out, _LINUX_CHANNEL_FRAGMENTS, _LINUX_DESKTOP_MAP, str.__contains__)
 
 
+def _configured_real_profile_browser() -> str | None:
+    """``browser.real_profile_browser`` when it names a known key, else None (unset/invalid)."""
+    try:
+        from hermes_cli.config import load_config
+        browser_cfg = (load_config() or {}).get("browser") or {}
+        value = str(browser_cfg.get("real_profile_browser") or "").strip().lower()
+    except Exception:
+        logger.debug("could not read browser.real_profile_browser", exc_info=True)
+        return None
+    if not value:
+        return None
+    if value not in _BROWSER_BY_KEY:
+        logger.warning("Ignoring browser.real_profile_browser=%r: expected one of %s",
+                       value, ", ".join(_BROWSER_BY_KEY))
+        return None
+    return value
+
+
 def detect_default_chromium(system: str | None = None) -> str | None:
-    """Return the canonical key of the default Chromium browser, or None."""
+    """Return the canonical key of the Chromium browser whose profile real-profile mode uses.
+
+    ``browser.real_profile_browser`` wins when set to a known key, so a user whose OS default
+    is Firefox can still point Hermes at an installed Chrome; otherwise the OS default browser
+    is detected, and a non-Chromium default resolves to None.
+    """
+    configured = _configured_real_profile_browser()
+    if configured:
+        return configured
     detect = {"Windows": _detect_default_windows, "Darwin": _detect_default_darwin}
     return detect.get(system or platform.system(), _detect_default_linux)()
 

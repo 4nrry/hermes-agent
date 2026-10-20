@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react'
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { type ProfileScope, saveHermesConfigRecord } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { notify, notifyError } from '@/store/notifications'
 
 import { hermesConfigCacheWriter, useHermesConfigRecord } from '../hooks/use-config-record'
 
-import { ToggleRow } from './primitives'
+import { CONTROL_TEXT, EMPTY_SELECT_VALUE } from './constants'
+import { ListRow, ToggleRow } from './primitives'
 
 interface BrowserRealProfilePanelProps {
   /** Capabilities profile-scope override — the toggle reads/writes THIS
@@ -24,6 +26,21 @@ export function readUseRealProfile(record: Record<string, unknown> | undefined):
   }
 
   return false
+}
+
+// Keys match hermes_cli/browser_connect.py::_BROWSERS; product names stay untranslated.
+const REAL_PROFILE_BROWSERS = [
+  ['chrome', 'Google Chrome'],
+  ['chromium', 'Chromium'],
+  ['brave', 'Brave'],
+  ['brave-origin', 'Brave Origin'],
+  ['edge', 'Microsoft Edge']
+] as const
+
+function browserSection(config: Record<string, unknown>): Record<string, unknown> {
+  return config.browser && typeof config.browser === 'object' && !Array.isArray(config.browser)
+    ? (config.browser as Record<string, unknown>)
+    : {}
 }
 
 /**
@@ -54,12 +71,7 @@ export function BrowserRealProfilePanel({ profile }: BrowserRealProfilePanelProp
         return
       }
 
-      const browser =
-        config.browser && typeof config.browser === 'object' && !Array.isArray(config.browser)
-          ? (config.browser as Record<string, unknown>)
-          : {}
-
-      const next = { ...config, browser: { ...browser, use_real_profile: on } }
+      const next = { ...config, browser: { ...browserSection(config), use_real_profile: on } }
 
       setBusy(true)
       setConfig(next)
@@ -84,13 +96,64 @@ export function BrowserRealProfilePanel({ profile }: BrowserRealProfilePanelProp
     [config, copy, profile, setConfig, writeScope]
   )
 
+  const selectedBrowser = config ? String(browserSection(config).real_profile_browser ?? '') : ''
+
+  const chooseBrowser = useCallback(
+    async (key: string) => {
+      if (!config) {
+        return
+      }
+
+      setBusy(true)
+      setConfig({ ...config, browser: { ...browserSection(config), real_profile_browser: key } })
+
+      try {
+        await saveHermesConfigRecord({ browser: { real_profile_browser: key } }, writeScope ?? profile)
+        notify({ kind: 'info', title: copy.browserSavedTitle, message: copy.browserSavedMessage })
+      } catch (err) {
+        setConfig(config)
+        notifyError(err, copy.failedSave)
+      } finally {
+        setBusy(false)
+      }
+    },
+    [config, copy, profile, setConfig, writeScope]
+  )
+
   return (
-    <ToggleRow
-      checked={enabled}
-      description={copy.description}
-      disabled={busy || !config}
-      label={copy.label}
-      onChange={on => void toggle(on)}
-    />
+    <>
+      <ToggleRow
+        checked={enabled}
+        description={copy.description}
+        disabled={busy || !config}
+        label={copy.label}
+        onChange={on => void toggle(on)}
+      />
+      {enabled && (
+        <ListRow
+          action={
+            <Select
+              disabled={busy || !config}
+              onValueChange={next => void chooseBrowser(next === EMPTY_SELECT_VALUE ? '' : next)}
+              value={selectedBrowser || EMPTY_SELECT_VALUE}
+            >
+              <SelectTrigger aria-label={copy.browserLabel} className={CONTROL_TEXT}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EMPTY_SELECT_VALUE}>{copy.browserSystemDefault}</SelectItem>
+                {REAL_PROFILE_BROWSERS.map(([key, name]) => (
+                  <SelectItem key={key} value={key}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+          description={copy.browserDescription}
+          title={copy.browserLabel}
+        />
+      )}
+    </>
   )
 }

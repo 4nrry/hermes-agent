@@ -1315,6 +1315,11 @@ export const jaOverrides = {
         disabledTitle: '実プロファイルブラウジング：オフ',
         disabledMessage: 'プロファイルのスナップショットは削除され、新しいセッションはクリーンなブラウザを使用します。',
         failedSave: '実プロファイル設定を保存できませんでした',
+        browserLabel: 'コピー元のブラウザ',
+        browserDescription: 'スナップショットを作成するインストール済み Chromium ブラウザ。システム既定は OS の既定ブラウザを使います。',
+        browserSystemDefault: 'システム既定（自動）',
+        browserSavedTitle: '実プロファイルのブラウザを保存しました',
+        browserSavedMessage: '新しいセッションはこのブラウザのプロファイルをコピーします。',
         prompt: {
           title: 'サイトにログインしたまま利用',
           body: 'Hermes が既定ブラウザプロファイルのスナップショットでブラウジングできるようにすると、サイトはログイン済みの状態で開きます。',

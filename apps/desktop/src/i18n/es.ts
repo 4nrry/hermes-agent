@@ -2389,6 +2389,11 @@ export const esOverrides = {
         disabledTitle: 'Navegación con perfil real desactivada',
         disabledMessage: 'Se eliminará la instantánea del perfil; las sesiones nuevas usan un navegador limpio.',
         failedSave: 'No se pudo guardar el ajuste del perfil real',
+        browserLabel: 'Navegador de origen',
+        browserDescription: 'El navegador Chromium instalado cuyo perfil se copia. Predeterminado del sistema usa el navegador predeterminado de tu SO.',
+        browserSystemDefault: 'Predeterminado del sistema (auto)',
+        browserSavedTitle: 'Navegador del perfil real guardado',
+        browserSavedMessage: 'Las nuevas sesiones copiarán el perfil de este navegador.',
         prompt: {
           title: 'Mantén la sesión iniciada en tus sitios',
           body: 'Deja que Hermes navegue con una instantánea de tu perfil predeterminado del navegador, para que los sitios se abran con la sesión ya iniciada.',

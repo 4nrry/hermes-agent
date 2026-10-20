@@ -2403,6 +2403,11 @@ export const frOverrides = {
         disabledMessage:
           "L'instantané du profil sera supprimé ; les nouvelles sessions utiliseront un navigateur vierge.",
         failedSave: "Impossible d'enregistrer le paramètre du profil réel",
+        browserLabel: 'Navigateur source',
+        browserDescription: 'Le navigateur Chromium installé dont le profil est copié. Par défaut du système utilise le navigateur par défaut de votre OS.',
+        browserSystemDefault: 'Par défaut du système (auto)',
+        browserSavedTitle: 'Navigateur du profil réel enregistré',
+        browserSavedMessage: 'Les nouvelles sessions copieront le profil de ce navigateur.',
         prompt: {
           title: 'Restez connecté à vos sites',
           body: "Autorisez Hermes à naviguer avec un instantané de votre profil de navigateur par défaut afin que les sites s'ouvrent avec vos sessions déjà connectées.",
