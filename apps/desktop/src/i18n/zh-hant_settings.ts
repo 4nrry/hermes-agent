@@ -1568,7 +1568,6 @@ export const zhHantSettings = {
         failedSave: '無法儲存真實設定檔設定',
         browserLabel: '複製來源瀏覽器',
         browserDescription: '要快照其設定檔的已安裝 Chromium 瀏覽器。系統預設使用作業系統的預設瀏覽器。',
-        browserSystemDefault: '系統預設（自動）',
         browserSavedTitle: '已儲存真實設定檔瀏覽器',
         browserSavedMessage: '新工作階段將複製此瀏覽器的設定檔。',
         prompt: {

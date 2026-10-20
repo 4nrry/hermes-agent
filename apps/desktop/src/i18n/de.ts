@@ -2402,7 +2402,6 @@ export const deOverrides = {
         failedSave: 'Die Echtes-Profil-Einstellung konnte nicht gespeichert werden',
         browserLabel: 'Browser als Quelle',
         browserDescription: 'Das Profil welches installierten Chromium-Browsers kopiert wird. Systemstandard nutzt den Standardbrowser des Betriebssystems.',
-        browserSystemDefault: 'Systemstandard (automatisch)',
         browserSavedTitle: 'Browser für echtes Profil gespeichert',
         browserSavedMessage: 'Neue Sitzungen kopieren das Profil dieses Browsers.',
         prompt: {

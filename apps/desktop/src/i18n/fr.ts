@@ -2408,7 +2408,6 @@ export const frOverrides = {
         failedSave: "Impossible d'enregistrer le paramètre du profil réel",
         browserLabel: 'Navigateur source',
         browserDescription: 'Le navigateur Chromium installé dont le profil est copié. Par défaut du système utilise le navigateur par défaut de votre OS.',
-        browserSystemDefault: 'Par défaut du système (auto)',
         browserSavedTitle: 'Navigateur du profil réel enregistré',
         browserSavedMessage: 'Les nouvelles sessions copieront le profil de ce navigateur.',
         prompt: {

@@ -1243,3 +1243,11 @@ def test_real_profile_browser_invalid_value_is_none_and_warns(caplog):
 
 def test_unsupported_default_message_mentions_override():
     assert "browser.real_profile_browser" in bt_real_profile._real_profile_unsupported_reason(None)
+
+
+def test_installed_chromium_browsers_uses_executable_lookup(monkeypatch):
+    import hermes_cli.browser_connect as bc
+
+    present = {"edge", "chrome"}
+    monkeypatch.setattr(bc, "chromium_executable", lambda key, system=None: "/x" if key in present else None)
+    assert bc.installed_chromium_browsers("Linux") == ["chrome", "edge"]

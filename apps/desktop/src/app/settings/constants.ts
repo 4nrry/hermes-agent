@@ -229,13 +229,22 @@ export const PROVIDER_GROUPS: ProviderPrefix[] = [
   }
 ]
 
+// Product names for `browser.real_profile_browser` keys (hermes_cli/browser_connect.py::_BROWSERS).
+// Brand names stay untranslated; '' (system default) is labelled via i18n.
+export const REAL_PROFILE_BROWSER_LABELS: Record<string, string> = {
+  chrome: 'Google Chrome',
+  chromium: 'Chromium',
+  brave: 'Brave',
+  'brave-origin': 'Brave Origin',
+  edge: 'Microsoft Edge'
+}
+
 // Schema-side select overrides for desktop-relevant enum fields whose
 // backend schema only declares a string type.
 export const ENUM_OPTIONS: Record<string, string[]> = {
   'agent.image_input_mode': ['auto', 'native', 'text'],
   'approvals.mode': ['manual', 'smart', 'off'],
   'code_execution.mode': ['project', 'strict'],
-  'browser.real_profile_browser': ['', 'chrome', 'chromium', 'brave', 'brave-origin', 'edge'],
   'context.engine': ['compressor', 'default', 'custom'],
   // '' = inherit the agent's own effort; the rest is the shared scale.
   'delegation.reasoning_effort': ['', ...REASONING_EFFORTS],
@@ -244,6 +253,8 @@ export const ENUM_OPTIONS: Record<string, string[]> = {
   // per-request in web_server._schema_with_dynamic_provider_options), so
   // config-field consumes schema.options directly — a static list here would
   // shadow that and hide user-installed/pip providers (#49513).
+  // browser.real_profile_browser is likewise schema-served: the backend lists
+  // only the Chromium browsers installed on this machine (plus the saved value).
   // Terminal execution backends — kept in sync with the dispatch ladder in
   // tools/terminal_tool.py::_create_environment (local/docker/singularity/
   // modal/daytona/ssh). Remote backends need extra env (image, tokens, host).

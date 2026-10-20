@@ -2394,7 +2394,6 @@ export const esOverrides = {
         failedSave: 'No se pudo guardar el ajuste del perfil real',
         browserLabel: 'Navegador de origen',
         browserDescription: 'El navegador Chromium instalado cuyo perfil se copia. Predeterminado del sistema usa el navegador predeterminado de tu SO.',
-        browserSystemDefault: 'Predeterminado del sistema (auto)',
         browserSavedTitle: 'Navegador del perfil real guardado',
         browserSavedMessage: 'Las nuevas sesiones copiarán el perfil de este navegador.',
         prompt: {

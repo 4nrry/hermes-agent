@@ -2033,7 +2033,6 @@ export const en: Translations = {
         failedSave: 'Could not save the real-profile setting',
         browserLabel: 'Browser to copy from',
         browserDescription: 'Which installed Chromium browser\'s profile is snapshotted. System default uses your OS default browser.',
-        browserSystemDefault: 'System default (auto)',
         browserSavedTitle: 'Real-profile browser saved',
         browserSavedMessage: 'New sessions will snapshot this browser\'s profile.',
         prompt: {

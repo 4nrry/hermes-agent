@@ -225,6 +225,12 @@ def chromium_executable(browser: str, system: str | None = None) -> str | None:
     return found or _first_present(b.linux_paths)
 
 
+def installed_chromium_browsers(system: str | None = None) -> list[str]:
+    """Keys of the supported Chromium browsers with an executable present, in ``_BROWSERS``
+    order. File/PATH lookups only (via ``chromium_executable``) — never launches a browser."""
+    return [b.key for b in _BROWSERS if chromium_executable(b.key, system)]
+
+
 def _classify_default(value: str, channels, table, match) -> str | None:
     """Map an OS default-browser identifier to a canonical key. Channels are checked FIRST: a
     Beta/Dev/Canary id must fail closed (UNSUPPORTED_CHANNEL), never match the stable profile."""

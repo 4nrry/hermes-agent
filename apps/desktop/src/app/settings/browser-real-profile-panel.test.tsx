@@ -10,10 +10,22 @@ const mocks = vi.hoisted(() => ({
   loadedConfig: {} as Record<string, unknown>,
   notify: vi.fn(),
   notifyError: vi.fn(),
-  save: vi.fn()
+  save: vi.fn(),
+  schemaOptions: undefined as string[] | undefined
 }))
 
-vi.mock('@/hermes', () => ({
+vi.mock('@tanstack/react-query', async importOriginal => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useQuery: () => ({
+    data: mocks.schemaOptions
+      ? { fields: { 'browser.real_profile_browser': { type: 'select', options: mocks.schemaOptions } } }
+      : undefined
+  })
+}))
+
+vi.mock('@/hermes', async importOriginal => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getHermesConfigSchema: vi.fn(),
   saveHermesConfigRecord: (config: Record<string, unknown>, profile?: unknown) => mocks.save(config, profile)
 }))
 
@@ -21,6 +33,7 @@ vi.mock('@/i18n', () => ({
   useI18n: () => ({
     t: {
       settings: {
+        config: { systemDefault: 'System default' },
         toolsets: {
           browserRealProfile: {
             label: 'Use My Real Browser Profile',
@@ -32,7 +45,6 @@ vi.mock('@/i18n', () => ({
             failedSave: 'Could not save the real-profile setting',
             browserLabel: 'Browser to copy from',
             browserDescription: 'Which Chromium browser is snapshotted.',
-            browserSystemDefault: 'System default (auto)',
             browserSavedTitle: 'Real-profile browser saved',
             browserSavedMessage: 'New sessions snapshot this browser.'
           }
@@ -79,6 +91,7 @@ vi.mock('../hooks/use-config-record', () => ({
 describe('BrowserRealProfilePanel', () => {
   beforeEach(() => {
     mocks.loadedConfig = { browser: { allow_private_urls: false }, model: { provider: 'nous' } }
+    mocks.schemaOptions = undefined
     mocks.save.mockResolvedValue({ ok: true })
   })
 
@@ -168,5 +181,15 @@ describe('BrowserRealProfilePanel', () => {
     })
 
     expect(mocks.save).toHaveBeenCalledWith({ browser: { real_profile_browser: '' } }, undefined)
+  })
+
+  it('lists only schema-reported (installed) browsers plus the saved one', () => {
+    mocks.schemaOptions = ['', 'chrome', 'edge']
+    mocks.loadedConfig = { browser: { use_real_profile: true, real_profile_browser: 'chromium' } }
+    render(<BrowserRealProfilePanel />)
+
+    const names = screen.getAllByRole('option').map(option => option.textContent)
+
+    expect(names).toEqual(['System default', 'Google Chrome', 'Microsoft Edge', 'Chromium'])
   })
 })

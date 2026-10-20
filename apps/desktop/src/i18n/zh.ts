@@ -2006,7 +2006,6 @@ export const zhOverrides = {
         failedSave: '无法保存真实配置文件设置',
         browserLabel: '复制来源浏览器',
         browserDescription: '要快照其配置文件的已安装 Chromium 浏览器。系统默认使用操作系统的默认浏览器。',
-        browserSystemDefault: '系统默认（自动）',
         browserSavedTitle: '已保存真实配置文件浏览器',
         browserSavedMessage: '新会话将复制此浏览器的配置文件。',
         prompt: {

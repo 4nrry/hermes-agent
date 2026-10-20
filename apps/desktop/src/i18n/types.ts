@@ -1818,7 +1818,6 @@ export interface Translations extends NoticeTranslations {
         failedSave: string
         browserLabel: string
         browserDescription: string
-        browserSystemDefault: string
         browserSavedTitle: string
         browserSavedMessage: string
         prompt: {
