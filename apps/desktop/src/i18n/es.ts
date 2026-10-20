@@ -1230,7 +1230,8 @@ export const esOverrides = {
       browser: {
         allowPrivateUrls: 'URL privadas del navegador',
         autoLocalForPrivateUrls: 'Navegador local para URL privadas',
-        useRealProfile: 'Usar mi perfil real del navegador'
+        useRealProfile: 'Usar mi perfil real del navegador',
+        realProfileBrowser: 'Navegador del perfil real'
       },
       checkpoints: {
         enabled: 'Checkpoints de archivos',
@@ -1371,7 +1372,9 @@ export const esOverrides = {
       timezone: 'Identificador de zona horaria IANA. Vacío usa la zona horaria del sistema.',
       browser: {
         useRealProfile:
-          'La navegación local usa tus inicios de sesión reales. Hermes copia el perfil de tu navegador predeterminado (cookies, inicios de sesión, preferencias) en una instantánea gestionada y lo controla con su Chromium integrado: tu perfil activo nunca se abre directamente y la copia se actualiza a partir de él en cada ejecución. También permite que el agente abra bajo petición una sesión local con tu perfil real, incluso si hay un backend de navegador en la nube configurado. Solo se admiten navegadores Chromium (Chrome, Edge, Brave, Brave Origin, Chromium); un navegador predeterminado que no sea Chromium falla con un mensaje claro. Desactivado de forma predeterminada.'
+          'La navegación local usa tus inicios de sesión reales. Hermes copia el perfil de tu navegador predeterminado (cookies, inicios de sesión, preferencias) en una instantánea gestionada y lo controla con su Chromium integrado: tu perfil activo nunca se abre directamente y la copia se actualiza a partir de él en cada ejecución. También permite que el agente abra bajo petición una sesión local con tu perfil real, incluso si hay un backend de navegador en la nube configurado. Solo se admiten navegadores Chromium (Chrome, Edge, Brave, Brave Origin, Chromium); un navegador predeterminado que no sea Chromium falla con un mensaje claro. Desactivado de forma predeterminada.',
+        realProfileBrowser:
+          'De qué navegador Chromium instalado se copia el perfil real. En blanco usa el navegador predeterminado del sistema.'
       },
       agent: {
         imageInputMode: 'Controla cómo se envían los adjuntos de imagen al modelo.',

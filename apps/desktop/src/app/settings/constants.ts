@@ -235,6 +235,7 @@ export const ENUM_OPTIONS: Record<string, string[]> = {
   'agent.image_input_mode': ['auto', 'native', 'text'],
   'approvals.mode': ['manual', 'smart', 'off'],
   'code_execution.mode': ['project', 'strict'],
+  'browser.real_profile_browser': ['', 'chrome', 'chromium', 'brave', 'brave-origin', 'edge'],
   'context.engine': ['compressor', 'default', 'custom'],
   // '' = inherit the agent's own effort; the rest is the shared scale.
   'delegation.reasoning_effort': ['', ...REASONING_EFFORTS],
@@ -472,7 +473,8 @@ export const FIELD_LABELS: Record<string, string> = defineFieldCopy({
   browser: {
     allowPrivateUrls: 'Browser Private URLs',
     autoLocalForPrivateUrls: 'Local Browser For Private URLs',
-    useRealProfile: 'Use My Real Browser Profile'
+    useRealProfile: 'Use My Real Browser Profile',
+    realProfileBrowser: 'Real Profile Browser'
   },
   checkpoints: {
     enabled: 'File Checkpoints',
@@ -621,7 +623,9 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
   timezone: 'IANA timezone identifier. Blank uses the system timezone.',
   browser: {
     useRealProfile:
-      "Local browsing uses your real logins. Hermes copies your default browser's profile (cookies, logins, preferences) into a managed snapshot and drives it with its packaged Chromium — your live profile is never opened directly, and the copy is refreshed from it on each run. Also lets the agent open a local real-profile session on request even when a cloud browser backend is configured. Only Chromium browsers (Chrome, Edge, Brave, Brave Origin, Chromium) are supported; a non-Chromium default fails with a clear message. Off by default."
+      "Local browsing uses your real logins. Hermes copies your default browser's profile (cookies, logins, preferences) into a managed snapshot and drives it with its packaged Chromium — your live profile is never opened directly, and the copy is refreshed from it on each run. Also lets the agent open a local real-profile session on request even when a cloud browser backend is configured. Only Chromium browsers (Chrome, Edge, Brave, Brave Origin, Chromium) are supported; a non-Chromium default fails with a clear message. Off by default.",
+    realProfileBrowser:
+      'Which installed Chromium browser the real profile is copied from. Blank uses your OS default browser, so you can keep a non-Chromium default (e.g. Firefox) and still copy Chrome.'
   },
   agent: {
     imageInputMode: 'Controls how image attachments are sent to the model.',
@@ -768,7 +772,7 @@ export const SECTIONS: DesktopConfigSection[] = [
     id: 'browser',
     label: 'Browser',
     icon: Globe,
-    keys: ['browser.use_real_profile', 'browser.allow_private_urls', 'browser.auto_local_for_private_urls']
+    keys: ['browser.use_real_profile', 'browser.real_profile_browser', 'browser.allow_private_urls', 'browser.auto_local_for_private_urls']
   },
   {
     id: 'memory',
